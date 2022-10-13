@@ -1,0 +1,4 @@
+<launch>
+  <node pkg="a1_obavmotplan" type="movecode.py" name="idk"  output="screen">
+  </node>
+</launch>

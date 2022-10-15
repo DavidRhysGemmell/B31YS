@@ -23,25 +23,44 @@ class Drive_at_block:
         self.real_angle= np.zeros(720)
         self.linearx=0
         self.lineary=0
+        self.robot_position=([[0],[0]])
 
 
     def callback_laser(self, LaserMsg):
         self.Laser_scan_array = LaserMsg
         
+        
         for i in range(720):
-            self.real_angle[i] = (i/2) + self.real_yaw
-            if self.Laser_scan_array.ranges[i] < self.Laser_scan_array.range_max:
-                if self.Laser_scan_array.ranges[i] > self.Laser_scan_array.range_min:
-                    ob_y= self.lineary + self.Laser_scan_array.ranges[i]*math.sin(self.real_angle[i]) #y coordinate of an obstacle
-                    ob_x= self.linearx + self.Laser_scan_array.ranges[i]*math.cos(self.real_angle[i]) #x coordinate of an obstacle
-                    self.grid[int(ob_x), int(ob_y)]=1 #sets the coordinates of obstacle on grid as 1
-                    print(self.Laser_scan_array.ranges[i])   
-                             
-        #print(self.real_angle[0])
-        
-        
+            # self.real_angle[i] = (i/2) + self.real_yaw #angle of laser relative to world frame
+            # if self.real_angle[i] >= 360:
+            #     self.real_angle[i] = self.real_angle[i] - 360
+            # self.real_angle[i]= self.real_angle[i]*180/math.pi #convert it to radians for sin cos you fucking idiot
+            theta= (i/2) *180/math.pi
 
-                        
+
+
+            if self.Laser_scan_array.ranges[i] <2: #self.Laser_scan_array.range_max:
+                #print(self.Laser_scan_array.ranges[i])
+                if self.Laser_scan_array.ranges[i] > self.Laser_scan_array.range_min:
+                    bodyframe=([[(self.Laser_scan_array.ranges[i]*math.cos(theta))], [self.Laser_scan_array.ranges[i]*math.sin(theta)]])
+                    #print(bodyframe)
+                    R=np.array([[math.cos(self.real_yaw),-1*math.sin(self.real_yaw)],[math.sin(self.real_yaw),math.cos(self.real_yaw)]])
+                    ob= (self.robot_position)+(np.dot(R,bodyframe))
+                    #print(ob)
+                    #ob_y= (self.lineary + self.Laser_scan_array.ranges[i]*math.sin(self.real_angle[i]))*10 +7 #y coordinate of an obstacle
+                    #ob_x= (self.linearx + self.Laser_scan_array.ranges[i]*math.cos(self.real_angle[i]))*10 +7#x coordinate of an obstacle
+                    
+                    self.grid[(int(ob[0]*10))+49, int(ob[1]*10)+49]=1 #sets the coordinates of obstacle on grid as 1
+                    print((int(ob[0]*10))+49, int(ob[1]*10)+49)
+                    # print("---")
+                    # print(ob_y)
+                    # print(ob_x)
+                    
+                    #print(f"range is {self.Laser_scan_array.ranges[i]:.2f}")
+                    #print(f"range is {self.Laser_scan_array.ranges[i]:.2f}, angle is{self.real_angle:.2f}")
+                    #print(self.lineary) 
+        #print(self.grid)                   
+        #print(self.real_angle[0])           
         # closest_object_range=min(self.Laser_scan_array.ranges)
         # #print(closest_object_range)
         # self.closest_object_angle=self.Laser_scan_array.ranges.index(min(self.Laser_scan_array.ranges))
@@ -81,14 +100,18 @@ class Drive_at_block:
     def callback_function(self, odom_data):
         self.linearx=odom_data.pose.pose.position.x
         self.lineary=odom_data.pose.pose.position.y
+        self.robot_position=([[self.linearx], [self.lineary]]) #position on grid
+        #print(self.robot_position)
         linearz=odom_data.pose.pose.position.z
         quaternion_orientation= odom_data.pose.pose.orientation
         (roll, pitch, yaw) = euler_from_quaternion([quaternion_orientation.x, quaternion_orientation.y, quaternion_orientation.z, quaternion_orientation.w])
         if yaw < 0:
-            self.real_yaw = (yaw*(180/math.pi))+360
+            self.real_yaw =yaw+2*math.pi
         else:
-            self.real_yaw = yaw*(180/math.pi) 
-        #print(f"x is {linearx:.2f}, y is {lineary:.2f}, z is {linearz:.2f}, Yaw is {self.real_yaw:.2f}")
+            self.real_yaw = yaw #angle of robot relative to world frame
+
+        #print(self.real_yaw)
+        #print(f"x is {self.linearx:.2f}, y is {self.lineary:.2f}, z is {linearz:.2f}, Yaw is {self.real_yaw:.2f}")
     
 
 
@@ -105,3 +128,4 @@ if __name__ == '__main__':
     rospy.loginfo('its working dipshit')
     Drive_at_block()
     rospy.spin()
+

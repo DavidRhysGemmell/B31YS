@@ -4,6 +4,7 @@
 import rospy
 from nav_msgs.msg import Odometry
 from tf.transformations import euler_from_quaternion
+import math
 class Subscriber:
 
     def __init__(self):
@@ -14,13 +15,16 @@ class Subscriber:
     def callback_function(self, odom_data):
         linearx=odom_data.pose.pose.position.x
         lineary=odom_data.pose.pose.position.y
+        #robot_position=([[linearx+7], [lineary+7]])
+        #print(self.robot_position)
         linearz=odom_data.pose.pose.position.z
-        thetaw=odom_data.pose.pose.orientation.w
-        (roll, pitch, yaw) = euler_from_quaternion([linearx, lineary, linearz, thetaw])
-        print(f"x is {linearx:.2f}, y is {lineary:.2f}, z is {linearz:.2f}, Yaw is {yaw:.2f}")
-        robot_position=(linearx+20, lineary+20, yaw)
-        print(robot_position)        
-    
+        quaternion_orientation= odom_data.pose.pose.orientation
+        (roll, pitch, yaw) = euler_from_quaternion([quaternion_orientation.x, quaternion_orientation.y, quaternion_orientation.z, quaternion_orientation.w])
+        if yaw < 0:
+            real_yaw = (yaw*(180/math.pi))+360
+        else:
+            real_yaw = yaw*(180/math.pi) #angle of robot relative to world frame     
+        print(f"x is {linearx:.2f}, y is {lineary:.2f}, z is {linearz:.2f}, Yaw is {real_yaw:.2f}")
     def main_loop(self):
         rospy.spin()
 

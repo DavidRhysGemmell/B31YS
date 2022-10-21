@@ -1,4 +1,11 @@
 <launch>
-  <node pkg="a1_obavmotplan" type="movecode.py" name="idk"  output="screen">
-  </node>
+
+    <arg name="x_goal" default="80">
+    <arg name="y_goal" default="80">
+
+  <node pkg="a1_obavmotplan" type="movecode.py" name="go_robot_go"  output="screen">
+    <param name="x_goal" value="$arg x_goal)" />
+    <param name="y_goal" value="$arg y_goal)" />
+
+   </node>
 </launch>

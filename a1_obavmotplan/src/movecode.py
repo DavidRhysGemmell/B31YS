@@ -17,7 +17,8 @@ class Drive_at_block:
         # self.x_goal=int(rospy.get_param("/go_robot_go/x_goal"))
         # self.y_goal=int(rospy.get_param("/go_robot_goal/y_goal"))
         # self.goal=(self.x_goal,self.y_goal)
-        self.goal=(60,30)
+        self.goal=(65,55)
+        print(self.goal)
         self.grid=np.zeros((100,100))
         print(self.grid)
         self.closest_object_angle=0       
@@ -41,18 +42,18 @@ class Drive_at_block:
  
         
     def shutdown(self):
-        plt.imshow(self.grid)
-        plt.show()
         self.vel.angular.z=0
         self.vel.linear.x=0
         self.pub.publish(self.vel)
         plt.imshow(self.grid)
+        plt.show()
         print("shutting down")
 
     def callback_laser(self, LaserMsg):
         self.Laser_scan_array = LaserMsg
-        
-        
+        if min(self.Laser_scan_array.ranges)<=0.2:
+            print("too close to object, shutting down")
+            self.shutdown()
         for i in range(720):
             # self.real_angle[i] = (i/2) + self.real_yaw #angle of laser relative to world frame
             # if self.real_angle[i] >= 360:
@@ -128,10 +129,11 @@ class Drive_at_block:
         k_rep=1
         q=self.robot_position_grid #robot position on grid
         p_goal=math.sqrt(pow(q_goal[0]-self.robot_position_grid[0],2)+pow(q_goal[1]-self.robot_position_grid[1],2)) #distance from robot to goal
+        print(p_goal)
         #Attractive
         U_att=1/2 *k_att*pow(p_goal,2)
         
-        F_att=-k_att*((q[0]-q_goal[0]),(q[1]-q_goal[1]))
+        F_att=(-k_att*(q[0]-q_goal[0]),-k_att*(q[1]-q_goal[1]))
         
         for i in range(-20,20): #takes a 2m range around the robot, based on the map though
             for j in range(-20,20):
@@ -143,12 +145,12 @@ class Drive_at_block:
                         F_rep=F_rep+k_rep*((1/p_q)-(1/p_0))*(1/pow(p_q,2))*((q-self.q_0)/p_q)
                     else:
                         U_rep=0
-        print(F_att) 
-        print(-k_att*(q[0]-q_goal[0]),(q[1]-q_goal[1]))               
+        #print(F_att) 
+                       
         potential_vector= (F_att[1]+F_rep[1],F_att[0]+F_rep[0])
-        print(potential_vector)
+        #print(potential_vector)
         self.potential_angle=np.arctan2(potential_vector[1],potential_vector[0])
-        self.potential_force= self.max_speed/math.sqrt(pow(potential_vector[0],2),potential_vector[1])
+        self.potential_force= self.max_speed/math.sqrt(pow(potential_vector[0]+potential_vector[1],2))
         self.turn()
 
     def turn(self):
@@ -176,7 +178,7 @@ class Drive_at_block:
 
 
     def found_goal(self):
-        if self.robot_position_grid==self.goal:
+        if abs(self.robot_position_grid[0]-self.goal[0])<=2 and abs(self.robot_position_grid[1]-self.robot_position_grid[1])<=2:
             print("found goal, you finally succeeded at something")
             self.shutdown()
 
@@ -187,7 +189,7 @@ class Drive_at_block:
         self.lineary=odom_data.pose.pose.position.y
         self.robot_position=([[self.linearx], [self.lineary]]) #position on not on array
         self.robot_position_grid=(self.linearx*10+49, self.lineary*10+49)
-        #print(self.robot_position)
+        print(self.robot_position_grid)
         linearz=odom_data.pose.pose.position.z
         quaternion_orientation= odom_data.pose.pose.orientation
         (roll, pitch, yaw) = euler_from_quaternion([quaternion_orientation.x, quaternion_orientation.y, quaternion_orientation.z, quaternion_orientation.w])
@@ -198,7 +200,12 @@ class Drive_at_block:
         
         if self.robot_position_grid[0] >=75 or self.robot_position_grid[1] >=75 or self.robot_position_grid[0]<=25 or self.robot_position_grid[1]<=25:
             print("Warning, robot close to edge of map, will fall off into void soon...")
-
+        if max(self.robot_position_grid)>=100:
+            print("fell into the void, shutting down")
+            self.vel.angular.z=0
+            self.vel.linear.x=0
+            self.pub.publish(self.vel) 
+            self.shutdown()           
         #print(self.real_yaw)
         #print(f"x is {self.linearx:.2f}, y is {self.lineary:.2f}, z is {linearz:.2f}, Yaw is {self.real_yaw:.2f}")
     

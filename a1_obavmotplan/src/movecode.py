@@ -112,20 +112,20 @@ class Drive_at_block:
         self.turn()
 
     def turn(self):
-        print(((self.real_yaw-self.potential_angle)*180/math.pi))
+        #print(((self.real_yaw-self.potential_angle)*180/math.pi))
         if abs((self.real_yaw-self.potential_angle)*180/math.pi) <= 2:
              self.vel.angular.z=0
              self.pub.publish(self.vel)
              self.on_target=True  
              print("on target")
              self.go_forward()
-        elif ((self.real_yaw-self.potential_angle)*180/math.pi) >2:
+        elif ((self.real_yaw-self.potential_angle)*180/math.pi) <2:
             self.on_target=False
             self.vel.linear.x=0
             self.vel.angular.z=0.5
             self.pub.publish(self.vel)
             print("turning left")
-        elif ((self.real_yaw-self.potential_angle)*180/math.pi) <-2:
+        elif ((self.real_yaw-self.potential_angle)*180/math.pi) >-2:
             self.on_target=False
             self.vel.linear.x=0
             self.vel.angular.z=-0.5

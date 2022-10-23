@@ -1,11 +1,11 @@
 <launch>
 
-    <arg name="x_goal" default="80">
-    <arg name="y_goal" default="80">
+    <arg name="x_goal" default="40"/>
+    <arg name="y_goal" default="140"/>
 
   <node pkg="a1_obavmotplan" type="movecode.py" name="go_robot_go"  output="screen">
-    <param name="x_goal" value="$arg x_goal)" />
-    <param name="y_goal" value="$arg y_goal)" />
+        <param name="x_goal" value="$(arg x_goal)" />
+        <param name="y_goal" value="$(arg y_goal)" />
 
    </node>
 </launch>

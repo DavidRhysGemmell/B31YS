@@ -18,7 +18,7 @@ class Drive_at_block:
         # self.x_goal=int(rospy.get_param("/go_robot_go/x_goal"))
         # self.y_goal=int(rospy.get_param("/go_robot_goal/y_goal"))
         # self.goal=(self.x_goal,self.y_goal)
-        self.goal=(100,0)
+        self.goal=(40,140)
         print(self.goal)
         self.grid_size=200
         self.grid=np.zeros((self.grid_size,self.grid_size))
@@ -36,7 +36,7 @@ class Drive_at_block:
         self.robot_position=([[0],[0]])
         self.q_0=(0,0)
         self.robot_position_grid=([[self.grid/2],[self.grid_size/2]])
-        self.max_speed=1
+        self.max_speed=0.5
         self.ctrl_c=False
         rospy.on_shutdown(self.shutdown) 
         self.on_target=False
@@ -57,30 +57,27 @@ class Drive_at_block:
 
     def callback_laser(self, LaserMsg):
         self.Laser_scan_array = LaserMsg
-        for i in range(720):
-            theta= (i/2) *math.pi/180
-
-            if self.Laser_scan_array.ranges[i] <3: #self.Laser_scan_array.range_max:
-                #print(self.Laser_scan_array.ranges[i])
+        for i in range(720): #essentially index to match angles with laser ranges
+            theta= (i/2) *math.pi/180 
+            if self.Laser_scan_array.ranges[i] <5: #scans for obstacles in 5 meters
                 if self.Laser_scan_array.ranges[i] > self.Laser_scan_array.range_min:
                     bodyframe=([[(self.Laser_scan_array.ranges[i]*math.cos(theta))], [self.Laser_scan_array.ranges[i]*math.sin(theta)]])
-                    #print(bodyframe)
                     R=np.array([[math.cos(self.real_yaw),-1*math.sin(self.real_yaw)],[math.sin(self.real_yaw),math.cos(self.real_yaw)]])
-                    ob= (self.robot_position)+(np.dot(R,bodyframe))
-                    #print(ob)
-                    #ob_y= (self.lineary + self.Laser_scan_array.ranges[i]*math.sin(self.real_angle[i]))*10 +7 #y coordinate of an obstacle
-                    #ob_x= (self.linearx + self.Laser_scan_array.ranges[i]*math.cos(self.real_angle[i]))*10 +7#x coordinate of an obstacle
-                    
+                    ob= (self.robot_position)+(np.dot(R,bodyframe))                  
                     self.grid[(int(ob[0]*10))+int(self.grid_size/2), int(ob[1]*10)+int(self.grid_size/2)]=1 #sets the coordinates of obstacle on grid as 1
-
+        for i in range(-1,1):
+            for j in range(-1,1):
+                if self.grid[self.goal[i],self.goal[j]] == 1:
+                    print("Goal is occupied by obstacle. Shutting down")
+                    self.shutdown()
         self.potential_field()
 
     def potential_field(self):
-        p_0=30 #barrier around object in grid squares
+        p_0=15 #barrier around object in grid squares
         q_goal=self.goal
         F_rep=(0,0)
-        k_att=1
-        k_rep=10
+        k_att=3
+        k_rep=5
         q=self.robot_position_grid #robot position on grid
         p_goal=math.sqrt(pow(q_goal[0]-self.robot_position_grid[0],2)+pow(q_goal[1]-self.robot_position_grid[1],2)) #distance from robot to goal
         #print(p_goal)
@@ -93,31 +90,35 @@ class Drive_at_block:
         #print(f"F_att is{F_att}")
         
         for i in range(-p_0,p_0): #takes a p_0m range around the robot, based on the map though
-            for j in range(-20,20):
+            for j in range(-p_0,p_0):
                 if self.grid[int(self.robot_position_grid[0])+i,int(self.robot_position_grid[1])+j] == 1: #takes all points on the map that have an obstacle
                     p_q=math.sqrt(pow(i,2)+pow(j,2)) # distance to obstacle
                         #Repulsive
-                    if p_q<=p_0:
+                    if p_q<=1.4:
+                        F_rep = (10000,10000)    #stops divide by 0, rep goes high
+                    elif p_q<=p_0 and p_q>1.4:
                         #U_rep=1/2 * k_rep*(pow((1/p_q)-(1/p_0),2))
                         F_rep=(F_rep[0]+(k_rep*((1/p_q)-(1/p_0))*(1/pow(p_q,2))*(q[0]-self.q_0[0])/p_q),F_rep[1]+(k_rep*((1/p_q)-(1/p_0))*(1/pow(p_q,2))*((q[1]-self.q_0[1])/p_q)))
-                    else:
-                        U_rep=0
+
         #print(f"F_att is {F_att}, F_rep is {F_rep}") 
 
-                       
+        #print(f"F_rep is {F_rep}")               
         potential_vector= (F_att[0]+F_rep[0],F_att[1]+F_rep[1])
         #print(potential_vector)
-        self.potential_angle=np.arctan2(potential_vector[1],potential_vector[0])+math.pi
+        self.potential_angle=np.arctan2(potential_vector[1],potential_vector[0])
+        if self.potential_angle<0:
+            self.potential_angle=self.potential_angle + 2*math.pi
 
-
-        self.potential_force= 10*self.max_speed/math.sqrt(pow(potential_vector[0],2)+pow(potential_vector[1],2))
+        self.potential_force= math.sqrt(pow(potential_vector[0],2)+pow(potential_vector[1],2))/100
+        if self.potential_force > self.max_speed:
+            self.potential_force = self.max_speed
         
-        #print(f" robot velocity would be{self.potential_force}")
+        print(f" robot velocity would be {math.sqrt(pow(potential_vector[0],2)+pow(potential_vector[1],2))/100}")
                 
         self.turn()
 
     def turn(self):
-        print(self.potential_angle)
+        #print(self.potential_angle)
         if abs((self.real_yaw-self.potential_angle)*180/math.pi) <= 4:
              self.vel.angular.z=0
              self.pub.publish(self.vel)
@@ -149,7 +150,7 @@ class Drive_at_block:
 
     def found_goal(self):
 
-        if math.sqrt(pow(self.robot_position_grid[0]-self.goal[0],2)+pow(self.robot_position_grid[1]-self.goal[1],2))<=2:
+        if math.sqrt(pow(self.robot_position_grid[0]-self.goal[0],2)+pow(self.robot_position_grid[1]-self.goal[1],2))<=2: #if robot within 20cm of goal
             print("found goal, you finally succeeded at something")
             self.vel.angular.z=0
             self.vel.linear.x=0

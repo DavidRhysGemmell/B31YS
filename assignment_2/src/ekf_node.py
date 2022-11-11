@@ -31,7 +31,7 @@ class FuseDataEKF:
         self.odompub = rospy.Publisher('/odometry_exp', Odometry, queue_size=1)
         self.gpspub = rospy.Publisher('/gps_exp', Odometry, queue_size=1)
         self.ekfpub = rospy.Publisher(
-            '/fused_pose_exp', Odometry, queue_size=1)
+            '/fused_pose', Odometry, queue_size=1)
 
         self.gps = True		# Flag to initialise first GPS data
         self.vo = False		# Flag to tell if a new vo data point has arrived
@@ -121,8 +121,8 @@ class FuseDataEKF:
         # Publish Data
         self.gpspub.publish(self.gpsdata)
         # Use this to update GPS covariance on the fly
-        # self.Qt[0][0] = msg.position_covariance[0] #called RT in error
-        # self.Qt[1][1] = msg.position_covariance[4] #called RT in error
+        self.Qt[0][0] = msg.position_covariance[0] #called RT in error
+        self.Qt[1][1] = msg.position_covariance[4] #called RT in error
         # print('QT', self.Qt)
         # Now do update for EKF
         if self.vo is True:  # We have new prediction, do update
@@ -136,10 +136,14 @@ class FuseDataEKF:
         # PUT YOUR CODE HERE - FOLLOW EQUATIONS IN NOTES. make me. #########################################################
 
         self.Mt[0]=self.posx+self.XvelLin*np.cos(self.yaw)-self.YvelLin*np.sin(self.yaw) #Mt is ekf predicitons, Mt[0] is x
-        self.Mt[1]=self.posy+Vx*np.sin(self.yaw) +self.YvelLin*np.cos(self.yaw) #Mt[1]
+        self.Mt[1]=self.posy+self.XvelLin*np.sin(self.yaw) +self.YvelLin*np.cos(self.yaw) #Mt[1]
         self.Mt[2]=self.yaw+self.ZvelAng #Mt[2]
-        V=sqrt(pow(self.XvelLin,2)+pow(self.YvelLin,2))
-        self.Rt=
+        #self.vel
+        #self.Rt=
+        Gt=np.array([[1,0,(-self.XvelLin*np.sin(self.yaw)-(self.YvelLin*np.cos(self.yaw)))],
+                    [0,1,(self.XvelLin*np.cos(self.yaw))-(self.YvelLin*np.sin(yaw))],
+                    [0,0,1]])
+        self.sigma_t=(Gt*self.sigma_t*np.transpose(Gt))+self.Rt
         # Saved positions. Note that we need to use quaternions to publish in rviz
         quat = tf.transformations.quaternion_from_euler(
             0.0, 0.0, self.Mt[2][0])
@@ -159,8 +163,11 @@ class FuseDataEKF:
     def ekf_update(self):
         # when new gps data comes in
         # ADD YOUR CODE HERE #################################################################################
-        z=[x_gps,y_gps]
-        self.Qt=
+        z=[self.Xgps,self.Ygps]
+        Ht=np.array([[1,0,0],
+                    [0,1,0]])
+        Kt=self.sigma_t*np.transpose(Ht)*pow(((Ht*self.sigma_t*np.transpose(Ht))+self.Qt),-1)
+        #self.Qt=
         print("update done")
 
     def csv(self):

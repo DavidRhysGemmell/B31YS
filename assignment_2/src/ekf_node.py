@@ -141,7 +141,7 @@ class FuseDataEKF:
         #self.vel
         #self.Rt=
         Gt=np.array([[1,0,(-self.XvelLin*np.sin(self.yaw)-(self.YvelLin*np.cos(self.yaw)))],
-                    [0,1,(self.XvelLin*np.cos(self.yaw))-(self.YvelLin*np.sin(yaw))],
+                    [0,1,(self.XvelLin*np.cos(self.yaw))-(self.YvelLin*np.sin(self.yaw))],
                     [0,0,1]])
         self.sigma_t=(Gt*self.sigma_t*np.transpose(Gt))+self.Rt
         # Saved positions. Note that we need to use quaternions to publish in rviz
@@ -163,10 +163,12 @@ class FuseDataEKF:
     def ekf_update(self):
         # when new gps data comes in
         # ADD YOUR CODE HERE #################################################################################
-        z=[self.Xgps,self.Ygps]
+        zt=[self.Xgps,self.Ygps]
         Ht=np.array([[1,0,0],
                     [0,1,0]])
         Kt=self.sigma_t*np.transpose(Ht)*pow(((Ht*self.sigma_t*np.transpose(Ht))+self.Qt),-1)
+        ut=ut+self.sigma_t+Kt*(zt-h(ut)) ############
+        self.sigma_t=(np.identity(3)-(Kt*Ht))*self.sigma_t
         #self.Qt=
         print("update done")
 

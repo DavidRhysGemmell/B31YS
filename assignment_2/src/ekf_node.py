@@ -135,11 +135,12 @@ class FuseDataEKF:
     def ekf_prediction(self):
         # PUT YOUR CODE HERE - FOLLOW EQUATIONS IN NOTES. make me. #########################################################
 
-        self.Mt[0]=self.posx+self.XvelLin*np.cos(self.yaw)-self.YvelLin*np.sin(self.yaw) #Mt is ekf predicitons, Mt[0] is x
-        self.Mt[1]=self.posy+self.XvelLin*np.sin(self.yaw) +self.YvelLin*np.cos(self.yaw) #Mt[1]
-        self.Mt[2]=self.yaw+self.ZvelAng #Mt[2]
+        self.Mt[0][0]=self.Mt[0][0]+self.XvelLin*np.cos(self.yaw)-self.YvelLin*np.sin(self.yaw) #Mt is ekf predicitons, Mt[0] is x
+        self.Mt[1][0]=self.Mt[1][0]+self.XvelLin*np.sin(self.yaw) +self.YvelLin*np.cos(self.yaw) #Mt[1]
+        self.Mt[2][0]=self.Mt[2][0]+self.ZvelAng #Mt[2]
         #self.vel
         #self.Rt=
+        
         Gt=np.array([[1,0,(-self.XvelLin*np.sin(self.yaw)-(self.YvelLin*np.cos(self.yaw)))],
                     [0,1,(self.XvelLin*np.cos(self.yaw))-(self.YvelLin*np.sin(self.yaw))],
                     [0,0,1]])
@@ -163,12 +164,13 @@ class FuseDataEKF:
     def ekf_update(self):
         # when new gps data comes in
         # ADD YOUR CODE HERE #################################################################################
-        zt=[self.Xgps,self.Ygps]
+        zt=np.array([[self.Xgps],
+                    [self.Ygps]])
         Ht=np.array([[1,0,0],
                     [0,1,0]])
-        Kt=self.sigma_t*np.transpose(Ht)*pow(((Ht*self.sigma_t*np.transpose(Ht))+self.Qt),-1)
-        ut=ut+self.sigma_t+Kt*(zt-h(ut)) ############
-        self.sigma_t=(np.identity(3)-(Kt*Ht))*self.sigma_t
+        Kt=np.dot(np.dot(self.sigma_t,np.transpose(Ht)),pow(((np.dot(np.dot(Ht,self.sigma_t),np.transpose(Ht)))+self.Qt),-1))
+        self.Mt=self.Mt+self.sigma_t+np.dot(Kt,(zt-self.Mt)) ##################
+        self.sigma_t=np.dot((np.identity(3)-(np.dot(Kt,Ht))),self.sigma_t)
         #self.Qt=
         print("update done")
 

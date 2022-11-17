@@ -166,13 +166,15 @@ class FuseDataEKF:
         # ADD YOUR CODE HERE #################################################################################
         zt=np.array([[self.Xgps],
                     [self.Ygps]])
+        
         Ht=np.array([[1,0,0],
                     [0,1,0]])
-        Kt=np.dot(np.dot(self.sigma_t,np.transpose(Ht)),pow(((np.dot(np.dot(Ht,self.sigma_t),np.transpose(Ht)))+self.Qt),-1))
-        self.Mt=self.Mt+self.sigma_t+np.dot(Kt,(zt-self.Mt)) ##################
+        Kt=np.dot(np.dot(self.sigma_t,np.transpose(Ht)),np.linalg.inv((np.dot(np.dot(Ht,self.sigma_t),np.transpose(Ht)))+self.Qt))
+        self.Mt=self.Mt+np.dot(Kt,(zt-np.dot(Ht,self.Mt))) ##################
         self.sigma_t=np.dot((np.identity(3)-(np.dot(Kt,Ht))),self.sigma_t)
         #self.Qt=
         print("update done")
+        #print(self.Mt)
 
     def csv(self):
         df_fused = pd.DataFrame(self.fusedMatrix, columns=[

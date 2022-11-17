@@ -54,10 +54,10 @@ class FuseDataEKF:
         # odom noise NEEDS TO BE TUNED
         self.Rt = np.array([[1, 0, 0],
                             [0, 1, 0],
-                            [0, 0, 1]]) * 0.01**2
+                            [0, 0, 1]]) * 0.3**2
         # gps noise NEEDS TO BE TUNED - OR USE THE LIVE DATA
         self.Qt = np.array([[1.0, 0.0], ##### 
-                            [0.0, 1.0]]) * 100**2
+                            [0.0, 1.0]]) * 10000**2
 
     def get_odometry(self, msg):
 
@@ -144,7 +144,7 @@ class FuseDataEKF:
         Gt=np.array([[1,0,(-self.XvelLin*np.sin(self.yaw)-(self.YvelLin*np.cos(self.yaw)))],
                     [0,1,(self.XvelLin*np.cos(self.yaw))-(self.YvelLin*np.sin(self.yaw))],
                     [0,0,1]])
-        self.sigma_t=(Gt*self.sigma_t*np.transpose(Gt))+self.Rt
+        self.sigma_t=np.dot(np.dot(Gt,self.sigma_t),np.transpose(Gt))+self.Rt
         # Saved positions. Note that we need to use quaternions to publish in rviz
         quat = tf.transformations.quaternion_from_euler(
             0.0, 0.0, self.Mt[2][0])

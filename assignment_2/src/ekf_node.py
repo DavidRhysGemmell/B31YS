@@ -55,9 +55,9 @@ class FuseDataEKF:
         self.Rt = np.array([[1, 0, 0],
                             [0, 1, 0],
                             [0, 0, 1]]) * 0.3**2
-        # gps noise NEEDS TO BE TUNED - OR USE THE LIVE DATA
+        # gps noise NEEDS TO BE TUNED - OR USE THE LIVE DATA #used live data. Changing Qt here does nothing.
         self.Qt = np.array([[1.0, 0.0], ##### 
-                            [0.0, 1.0]]) * 10000**2
+                            [0.0, 1.0]]) * 100**2
 
     def get_odometry(self, msg):
 

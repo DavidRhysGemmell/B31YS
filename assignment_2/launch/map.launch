@@ -6,5 +6,5 @@
     <node pkg="rviz" type="rviz" name="rviz" />
 
     <!-- Static fake TF transform -->
-    <node pkg="tf2_ros" type="static_transform_publisher" name="static_tf_fake" args="100 100 100 0.3 0 0 map gps" />
+    <node pkg="tf2_ros" type="static_transform_publisher" name="static_tf_fake" args="325 117 0 0 0 0 map odom" />
 </launch>

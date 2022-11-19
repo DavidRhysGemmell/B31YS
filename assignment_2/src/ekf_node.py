@@ -133,18 +133,16 @@ class FuseDataEKF:
     # as this is an unsynchronuous process with the gps ands you
     # need to keep updating position and covariances
     def ekf_prediction(self):
-        # PUT YOUR CODE HERE - FOLLOW EQUATIONS IN NOTES. make me. #########################################################
-
+        # PUT YOUR CODE HERE - FOLLOW EQUATIONS IN NOTES. 
+        #Updated Mt; position belief plus change.
         self.Mt[0][0]=self.Mt[0][0]+self.XvelLin*np.cos(self.yaw)-self.YvelLin*np.sin(self.yaw) #Mt is ekf predicitons, Mt[0] is x
-        self.Mt[1][0]=self.Mt[1][0]+self.XvelLin*np.sin(self.yaw) +self.YvelLin*np.cos(self.yaw) #Mt[1]
-        self.Mt[2][0]=self.Mt[2][0]+self.ZvelAng #Mt[2]
-        #self.vel
-        #self.Rt=
+        self.Mt[1][0]=self.Mt[1][0]+self.XvelLin*np.sin(self.yaw) +self.YvelLin*np.cos(self.yaw) #Mt[1] = y
+        self.Mt[2][0]=self.Mt[2][0]+self.ZvelAng #Mt[2] is yaw
         
         Gt=np.array([[1,0,(-self.XvelLin*np.sin(self.yaw)-(self.YvelLin*np.cos(self.yaw)))],
                     [0,1,(self.XvelLin*np.cos(self.yaw))-(self.YvelLin*np.sin(self.yaw))],
-                    [0,0,1]])
-        self.sigma_t=np.dot(np.dot(Gt,self.sigma_t),np.transpose(Gt))+self.Rt
+                    [0,0,1]]) # init jacobian
+        self.sigma_t=np.dot(np.dot(Gt,self.sigma_t),np.transpose(Gt))+self.Rt #update covariance
         # Saved positions. Note that we need to use quaternions to publish in rviz
         quat = tf.transformations.quaternion_from_euler(
             0.0, 0.0, self.Mt[2][0])
@@ -163,16 +161,15 @@ class FuseDataEKF:
 
     def ekf_update(self):
         # when new gps data comes in
-        # ADD YOUR CODE HERE #################################################################################
-        zt=np.array([[self.Xgps],
-                    [self.Ygps]])
+        # ADD YOUR CODE HERE 
+        zt=np.array([[self.Xgps], #zt is gps data
+                    [self.Ygps]]) 
         
-        Ht=np.array([[1,0,0],
-                    [0,1,0]])
-        Kt=np.dot(np.dot(self.sigma_t,np.transpose(Ht)),np.linalg.inv((np.dot(np.dot(Ht,self.sigma_t),np.transpose(Ht)))+self.Qt))
-        self.Mt=self.Mt+np.dot(Kt,(zt-np.dot(Ht,self.Mt))) ##################
-        self.sigma_t=np.dot((np.identity(3)-(np.dot(Kt,Ht))),self.sigma_t)
-        #self.Qt=
+        Ht=np.array([[1,0,0], #init Ht, just for ignoring yaw in other variables like gps that do not include yaw.
+                    [0,1,0]]) 
+        Kt=np.dot(np.dot(self.sigma_t,np.transpose(Ht)),np.linalg.inv((np.dot(np.dot(Ht,self.sigma_t),np.transpose(Ht)))+self.Qt)) 
+        self.Mt=self.Mt+np.dot(Kt,(zt-np.dot(Ht,self.Mt))) #update Mt using up to date gps
+        self.sigma_t=np.dot((np.identity(3)-(np.dot(Kt,Ht))),self.sigma_t) #update covariance using up to date gps
         print("update done")
         #print(self.Mt)
 
